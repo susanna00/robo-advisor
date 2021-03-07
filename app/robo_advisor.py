@@ -3,6 +3,7 @@
 import csv
 import json 
 import os
+import datetime
 
 from dotenv import load_dotenv 
 import requests
@@ -15,6 +16,7 @@ def to_usd(my_price):
 #
 # INFO OUTPUTS
 #
+
 
 api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
 
@@ -71,24 +73,30 @@ with open(csv_file_path,"w") as csv_file:
             "close": daily_prices["4. close"],
             "volume": daily_prices["5. volume"]
         })
-    
 
+#Formatting the request time and csv filepath (following screencast)
+time_now = datetime.datetime.now()
+formatted_time_now = time_now.strftime("%Y-%m-%d %H:%M:%S")
+
+formatted_csv_filepath = csv_filepath.split("..")[1]
+
+# Printing/Displaying final results
 print("-------------------------")
-print("SELECTED SYMBOL: XYZ")
+print("Stock: {symbol}")
 print("-------------------------")
-print("REQUESTING STOCK MARKET DATA...")
-print("REQUEST AT: 2018-02-20 02:00pm")
+print("Requesting stock market data...")
+print(f"Requested at: {formatted_time_now}")
 print("-------------------------")
-print(f"LATEST DAY: {last_refreshed}")
-print(f"LATEST CLOSE: {to_usd(float(latest_close))}")
-print(f"RECENT HIGH: {to_usd(float(recent_high))}")
-print(f"RECENT LOW: {to_usd(float(recent_low))}")
+print(f"Latest Data from: {last_refreshed}")
+print(f"Latest close: {to_usd(float(latest_close))}")
+print(f"Recent high: {to_usd(float(recent_high))}")
+print(f"Recent low: {to_usd(float(recent_low))}")
 print("-------------------------")
-print("RECOMMENDATION: BUY!")
-print("RECOMMENDATION REASON: TODO")
+print("Recommendation: BUY!")
+print("Because: TODO")
 print("-------------------------")
-print(f"WRITING DATA TO CSV: {csv_file_path}...")
+print(f"Writing data to CSV: {formatted_csv_filepath}...")
 print("-------------------------")
-print("HAPPY INVESTING!")
+print("Happy Investing!")
 print("-------------------------")
 
