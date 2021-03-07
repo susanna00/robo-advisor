@@ -10,23 +10,34 @@ import requests
 
 load_dotenv()
 
+# Defining functions 
 def to_usd(my_price):
     return"${0:,.2f}".format(my_price)
 
-#
-# INFO OUTPUTS
-#
+def compile_url(symbol):
+    api_key = os.environ.get("ALPHAVANTAGE_API_KEY") 
+    request_url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}"
+    return request_url 
+
+def get_response(request_url):
+    response = requests.get(request_url)
+    parsed_response = json.loads(response.text)
+    return parsed_response
 
 
-api_key = os.environ.get("ALPHAVANTAGE_API_KEY")
+# Information Input 
 
-symbol = "IBM" # accept user input 
 
-request_url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}"
 
-response = requests.get(request_url)
 
-parsed_response = json.loads(response.text)
+
+# accept user input 
+
+
+
+
+
+
 
 last_refreshed = parsed_response["Meta Data"]["3. Last Refreshed"]
 
