@@ -5,19 +5,40 @@ import json
 import os
 import datetime
 from pandas import DataFrame
+import statistics
+import matplotlib
 
 from dotenv import load_dotenv 
 import requests
 
-load_dotenv()
+
 
 # Defining functions 
-def to_usd(my_price):
-    return"${0:,.2f}".format(my_price)
+def to_usd(number):
+    number = float(number)
+    return"${0:,.2f}".format(number)
+    return number 
 
-def compile_url(symbol):
-    api_key = os.environ.get("ALPHAVANTAGE_API_KEY") 
-    request_url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}"
+def compile_url(stock_ticker):
+    load_dotenv()
+    API_KEY = os.environ.get("ALPHAVANTAGE_API_KEY") 
+    request_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={}&apikey={}".format(stock_ticker, API_KEY)
+    return request_url
+
+def get_response(request_url):
+    #issues request
+    response = requests.get(request_url)
+    #parses this data from json to dict
+
+    parsed_response = json.loads(response.text)
+    return parsed_response
+
+def transform_response(tsd):
+    #Gets list of all keys in tsd (days) and converts to list
+    day_keys = tsd.keys() #> 'dict_keys' of all the day values
+    days = list(day_keys) #> 'list' of all the day values
+    return days
+
     return request_url 
 
 def get_response(request_url):
@@ -65,6 +86,13 @@ for symbol in stock_list:
         tsd = parsed_response["Time Series (Daily)"] 
         days = transform_response(tsd)
 
+        print("-------------------------")
+        print("Stock: {symbol}")
+        print("-------------------------")
+        print("Requesting stock market data...")
+        print("-------------------------")
+
+
         timeStamps = []
         opens = []
         highs = []
@@ -93,81 +121,107 @@ for symbol in stock_list:
         csv_file_path = os.path.join(os.path.dirname(__file__),"..","data","prices", "symbol", ".csv")
         export_csv = df.to_csv(csv_file_path, header=True)
 
+        print("Data has been stored successfully")
 
+        #Formatting the request time 
+        time_now = datetime.datetime.now()
+        formatted_time_now = time_now.strftime("%Y-%m-%d %H:%M:%S")
         print("-------------------------")
-        print("Stock: {symbol}")
+        print(f"Requested at: {formatted_time_now}")
+
+        #Getting the latest data 
+        last_refreshed = parsed_response["Meta Data"]["3. Last Refreshed"]
         print("-------------------------")
-        print("Requesting stock market data...")
+        print(f"Latest Data from: {last_refreshed}")
+
+        #Latest close 
+        latest_close = tsd[days[0]]["4. close"]
+        print("Latest close: ".ljust(35) + to_USD(latest_close).rjust(10))
+
+
+        #Recent High 
+        recent_high = max(highs)
+        print("Recent high: ".ljust(35) + to_USD(recent_high).rjust(10))
+
+        #Recent Low 
+        recent_low = min(lows)
+        print("Recent low: ".ljust(35) + to_USD(recent_low).rjust(10))
+
+        #Calculating purchase decision 
+        difference = recent_high - recent_low
+        average_high = statistics.mean(highs)
+        average_low = statistics.mean(lows)
+        averageStockPrice = (average_high + average_low)/2
+        percentDifference = difference / averageStockPrice
+
+        if riskLevelMessage == False:
+            risk = .2
+
+            riskLevel = input("How much risk are you willing to take on in this investment?\n enter \"HIGH\", \"MED\", or \"LOW\": ")
+            riskLevel = riskLevel.upper()
+            
+            if riskLevel == "HIGH":
+                risk = .3
+            elif riskLevel == "MED":
+                risk = .2
+            elif riskLevel == "LOW":
+                risk = .1
+            else:
+                print("Invalid input, reverting to default risk value of 20% volatility.") 
+            
+            print("-------------------------")
+            riskLevelMessage = True
+
+
+        # Recommendation based on BFM knowledge 
+        print("Evaluating stock purchase decision...")
+        print("Recommendation: ")
+        if percentDifference > risk and float(latest_close) < recent_low:
+            print(" You should buy " + symbol + " because it has an above average volatility for you, with a below average closing price,\n Hence, this stock could have a big jump up.") 
+        elif float(lates_close) < recent_low:
+            print(" Even if " + symbol + " is at a relative low, you should not buy it as it is not as volatile as you indicated you were willing to risk and, \n Hence, you will not earn as much money.")
+        else:
+            print(" You should not buy " + symbol + " because it is not very volatile nor is it at a relative low. \n If you do purchase it is recommended that you wait until its price is at or below " + to_USD(average_low) + ".")
+
         print("-------------------------")
 
         
+        #Matplotlib Graphs
+        
+        graphDecision = input("Would like to see a graph of this stock value ? Input \"YES\" or press enter: ")
+        graphDecision = graphDecision.upper()
 
+        if graphDecision == "YES":
+            dayPlot = []
+            x = len(highs)
 
+            for number in highs:
+                dayPlot.append(x)
+                x = x-1
 
+            plt.plot(dayPlot, highs)
+            plt.plot(dayPlot, lows)
+            plt.title("Graph of " + symbol + " High and Low values over the past 100 days")
+            plt.ylabel("Stock Values in USD ($)")
+            plt.xlabel("Days")
+            plt.show()
 
+        nextStock = 0
+        nextStock = nextStock + 1
 
-# accept user input 
+        if nextStock < len(stock_list) and graphDecision == "YES":
+            Continue = input("Please close out of graph and press enter to view stock information on " + stock_list[nextStock] + ": ")
+            print("-------------------------")
+            print("-------------------------")
+        elif nextStock < len(stock_list):
+            Continue = input("Press enter to view stock information on " + stock_list[nextStock] + ": ")
+            print("-------------------------")
+            print("-------------------------")
+        else:
+            print("\nAll stocks have been viewed.")
 
-last_refreshed = parsed_response["Meta Data"]["3. Last Refreshed"]
-
-
-
-dates = list(tsd.keys())
-
-latest_day = dates[0]
-
-latest_close = tsd[latest_day]["4. close"]
-
-high_prices = []
-low_prices = []
-
-for date in dates:
-    high_price = tsd[date]["2. high"]
-    high_prices.append(float(high_price))
-    low_price = tsd[date]["3. low"]
-    low_prices.append(float(low_price))
-
-recent_high = max(high_prices)
-recent_low = min(low_prices)
-# breakpoint()
-
-#
-# INFO OUTPUTS
-# 
-
-
-
-    for date in dates:
-        daily_prices = tsd[date]
-        writer.writerow({
-            "timestamp": date,
-            "open": daily_prices["1. open"],
-            "high": daily_prices["2. high"],
-            "low": daily_prices["3. low"],
-            "close": daily_prices["4. close"],
-            "volume": daily_prices["5. volume"]
-        })
-
-#Formatting the request time and csv filepath (following screencast)
-time_now = datetime.datetime.now()
-formatted_time_now = time_now.strftime("%Y-%m-%d %H:%M:%S")
-
-formatted_csv_filepath = csv_filepath.split("..")[1]
-
-# Printing/Displaying final results
-
-print(f"Requested at: {formatted_time_now}")
-print("-------------------------")
-print(f"Latest Data from: {last_refreshed}")
-print(f"Latest close: {to_usd(float(latest_close))}")
-print(f"Recent high: {to_usd(float(recent_high))}")
-print(f"Recent low: {to_usd(float(recent_low))}")
-print("-------------------------")
-print("Recommendation: BUY!")
-print("Because: TODO")
-print("-------------------------")
-print(f"Writing data to CSV: {formatted_csv_filepath}...")
-print("-------------------------")
-print("Happy Investing!")
-print("-------------------------")
+    except requests.exceptions.ConnectionError:
+        print("Sorry we can't find any trading data for " + symbol + ".")
+    except KeyError:
+        print("Sorry we can't find any trading data for " + symbol + ".")
 
