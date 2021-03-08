@@ -21,8 +21,60 @@ def compile_url(symbol):
 
 def get_response(request_url):
     response = requests.get(request_url)
+    print(response)
     parsed_response = json.loads(response.text)
     return parsed_response
+
+def transform_response(parsed_response):
+    tsd = parsed_response["Time Series (Daily)"]
+    rows = []
+    for date, daily_prices in tsd.items(): 
+        row = {
+            "timestamp": date,
+            "open": float(daily_prices["1. open"]),
+            "high": float(daily_prices["2. high"]),
+            "low": float(daily_prices["3. low"]),
+            "close": float(daily_prices["4. close"]),
+            "volume": int(daily_prices["5. volume"])
+        }
+        rows.append(row)
+    return rows 
+
+def write_to_csv(rows, csv_filepath):
+    csv_headers = ["timestamp", "open", "high", "low","close", "volume"]
+    with open(csv_file_path,"w") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    return True 
+
+#User Input Information & Validation (multiple tickers): 
+symbol = ""
+stock_list = []
+First_message = False
+while symbol != "DONE":
+    symbol = input("Please input the ticker symbol of the stock you would like to evaluate (e.g. \"AMZN\" \"AAPL\" \"GOOG\"): ")
+    symbol = symbol.upper()
+    if symbol == "DONE":
+        print("Getting data from the Internet...")
+    elif symbol.isalpha() and len(symbol) <=5:
+        stock_list.append(symbol)
+    else:
+            print(f"Sorry {symbol} doesn't seem like an existing stock ticker. \nPlease ensure that your choice only contains letters and is five or less characters.")
+    if not First_message:
+        print("If you have more stocks you wish to evaluate, please continue to input their ticker symbols one at a time, otherwise input \"DONE\" ")
+        First_message = True 
+
+for stocksymbol in stock_list:
+    request_url = compile_URL(stockTicker)
+
+    try: 
+        parsed_response = get_response(request_url)
+        tsd = parsed_response["Time Series (Daily)"] 
+        days = transform_response(tsd)
+
+
 
 
 # Information Input 
@@ -33,15 +85,9 @@ def get_response(request_url):
 
 # accept user input 
 
-
-
-
-
-
-
 last_refreshed = parsed_response["Meta Data"]["3. Last Refreshed"]
 
-tsd = parsed_response["Time Series (Daily)"]
+
 
 dates = list(tsd.keys())
 
@@ -66,14 +112,8 @@ recent_low = min(low_prices)
 # INFO OUTPUTS
 # 
 
-
 csv_file_path = os.path.join(os.path.dirname(__file__),"..","data","prices.csv")
 
-csv_headers = ["timestamp", "open", "high", "low","close", "volume"]
-
-with open(csv_file_path,"w") as csv_file:
-    writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
-    writer.writeheader()
     for date in dates:
         daily_prices = tsd[date]
         writer.writerow({
