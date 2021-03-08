@@ -4,6 +4,7 @@ import csv
 import json 
 import os
 import datetime
+from pandas import DataFrame
 
 from dotenv import load_dotenv 
 import requests
@@ -21,24 +22,14 @@ def compile_url(symbol):
 
 def get_response(request_url):
     response = requests.get(request_url)
-    print(response)
+    
     parsed_response = json.loads(response.text)
     return parsed_response
 
-def transform_response(parsed_response):
-    tsd = parsed_response["Time Series (Daily)"]
-    rows = []
-    for date, daily_prices in tsd.items(): 
-        row = {
-            "timestamp": date,
-            "open": float(daily_prices["1. open"]),
-            "high": float(daily_prices["2. high"]),
-            "low": float(daily_prices["3. low"]),
-            "close": float(daily_prices["4. close"]),
-            "volume": int(daily_prices["5. volume"])
-        }
-        rows.append(row)
-    return rows 
+def transform_response(tsd):    
+    day_keys = tsd.keys() 
+    days = list(day_keys) 
+    return days 
 
 def write_to_csv(rows, csv_filepath):
     csv_headers = ["timestamp", "open", "high", "low","close", "volume"]
@@ -50,34 +41,66 @@ def write_to_csv(rows, csv_filepath):
     return True 
 
 #User Input Information & Validation (multiple tickers): 
-symbol = ""
+ticker = ""
 stock_list = []
 First_message = False
-while symbol != "DONE":
-    symbol = input("Please input the ticker symbol of the stock you would like to evaluate (e.g. \"AMZN\" \"AAPL\" \"GOOG\"): ")
-    symbol = symbol.upper()
-    if symbol == "DONE":
+while ticker != "DONE":
+    ticker = input("Please input the ticker symbol of the stock you would like to evaluate (e.g. \"AMZN\" \"AAPL\" \"GOOG\"): ")
+    ticker = ticker.upper()
+    if ticker == "DONE":
         print("Getting data from the Internet...")
-    elif symbol.isalpha() and len(symbol) <=5:
-        stock_list.append(symbol)
+    elif ticker.isalpha() and len(ticker) <=5:
+        stock_list.append(ticker)
     else:
-            print(f"Sorry {symbol} doesn't seem like an existing stock ticker. \nPlease ensure that your choice only contains letters and is five or less characters.")
+            print(f"Sorry {ticker} doesn't seem like an existing stock ticker. \nPlease ensure that your choice only contains letters and is five or less characters.")
     if not First_message:
         print("If you have more stocks you wish to evaluate, please continue to input their ticker symbols one at a time, otherwise input \"DONE\" ")
         First_message = True 
 
-for stocksymbol in stock_list:
-    request_url = compile_URL(stockTicker)
+for symbol in stock_list:
+    request_url = compile_URL(symbol)
 
     try: 
         parsed_response = get_response(request_url)
         tsd = parsed_response["Time Series (Daily)"] 
         days = transform_response(tsd)
 
+        timeStamps = []
+        opens = []
+        highs = []
+        lows = []
+        closes = []
+        volumes = []
+
+        for date in days:
+            timeStamps.append(date)
+            opens.append(tsd[date]["1. open"])
+            highs.append(float(tsd[date]["2. high"]))
+            lows.append(float(tsd[date]["3. low"]))
+            closes.append(tsd[date]["4. close"])
+            volumes.append(tsd[date]["5. volume"])
+
+        stocks = {
+                'timestamp': timeStamps,
+                'open': opens,
+                'high': highs,
+                'low': lows, 
+                'close': closes,
+                'volume': volumes
+                }
+        
+        df = DataFrame(stocks)
+        csv_file_path = os.path.join(os.path.dirname(__file__),"..","data","prices", "symbol", ".csv")
+        export_csv = df.to_csv(csv_file_path, header=True)
 
 
+        print("-------------------------")
+        print("Stock: {symbol}")
+        print("-------------------------")
+        print("Requesting stock market data...")
+        print("-------------------------")
 
-# Information Input 
+        
 
 
 
@@ -112,7 +135,7 @@ recent_low = min(low_prices)
 # INFO OUTPUTS
 # 
 
-csv_file_path = os.path.join(os.path.dirname(__file__),"..","data","prices.csv")
+
 
     for date in dates:
         daily_prices = tsd[date]
@@ -132,10 +155,7 @@ formatted_time_now = time_now.strftime("%Y-%m-%d %H:%M:%S")
 formatted_csv_filepath = csv_filepath.split("..")[1]
 
 # Printing/Displaying final results
-print("-------------------------")
-print("Stock: {symbol}")
-print("-------------------------")
-print("Requesting stock market data...")
+
 print(f"Requested at: {formatted_time_now}")
 print("-------------------------")
 print(f"Latest Data from: {last_refreshed}")
