@@ -7,6 +7,8 @@ import datetime
 from pandas import DataFrame
 import statistics
 import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pylot as plt 
 
 from dotenv import load_dotenv 
 import requests
@@ -26,45 +28,24 @@ def compile_url(stock_ticker):
     return request_url
 
 def get_response(request_url):
-    #issues request
-    response = requests.get(request_url)
-    #parses this data from json to dict
-
-    parsed_response = json.loads(response.text)
+    response = requests.get(request_url) #issuing request
+    parsed_response = json.loads(response.text) #parsing data from json to dict 
     return parsed_response
 
 def transform_response(tsd):
-    #Gets list of all keys in tsd (days) and converts to list
-    day_keys = tsd.keys() #> 'dict_keys' of all the day values
-    days = list(day_keys) #> 'list' of all the day values
+    day_keys = tsd.keys()
+    days = list(day_keys) 
     return days
 
-    return request_url 
-
-def get_response(request_url):
-    response = requests.get(request_url)
-    
-    parsed_response = json.loads(response.text)
-    return parsed_response
-
-def transform_response(tsd):    
-    day_keys = tsd.keys() 
-    days = list(day_keys) 
-    return days 
-
-def write_to_csv(rows, csv_filepath):
-    csv_headers = ["timestamp", "open", "high", "low","close", "volume"]
-    with open(csv_file_path,"w") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
-    return True 
+# Variables 
+stockList = []
+Ticker = ""
+Continue = ""
+firstMessage = False
+riskLevelMessage = False
+nextStock = 0
 
 #User Input Information & Validation (multiple tickers): 
-ticker = ""
-stock_list = []
-First_message = False
 while ticker != "DONE":
     ticker = input("Please input the ticker symbol of the stock you would like to evaluate (e.g. \"AMZN\" \"AAPL\" \"GOOG\"): ")
     ticker = ticker.upper()
@@ -225,3 +206,12 @@ for symbol in stock_list:
     except KeyError:
         print("Sorry we can't find any trading data for " + symbol + ".")
 
+
+#def write_to_csv(rows, csv_filepath):
+#    csv_headers = ["timestamp", "open", "high", "low","close", "volume"]
+#    with open(csv_file_path,"w") as csv_file:
+#        writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
+#        writer.writeheader()
+#        for row in rows:
+#            writer.writerow(row)
+#    return True 
